@@ -1,11 +1,12 @@
 ---
+# test-play.yml
 - hosts: all
   become: true
   vars:
     create_containers: 4
     default_container_name: docker
-    default_container_image: ubuntu
-    default_container_command: sleep 1d
+    default_container_image: busybox
+    default_container_command: /bin/bash
 
   tasks:
     - name: Install aptitude using apt
@@ -44,3 +45,15 @@
         command: "{{ default_container_command }}"
         state: present
       with_sequence: count={{ create_containers }}
+
+    - name: Pull nginx hello world Docker image
+      docker_image:
+        name: nginxdemos/hello
+        source: pull
+
+    - name: Start up a hello world server on port 8080 of "debian"
+      docker_container:
+        name: world
+        image: nginxdemos/hello
+        ports: 80:8080
+        state: present

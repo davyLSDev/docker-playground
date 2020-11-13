@@ -11,6 +11,7 @@
   vars:
     files:
       - not-the-right-file.sh
+    git_repo: "https://github.com/hoeghh/rancher-launcher-kvm.git"
     keys:
       - "https://baltocdn.com/helm/signing.asc"
       # Fails to download key using either quotes, without quotes it fails and ansible prompts to use quotes
@@ -20,11 +21,19 @@
       - git
       - apt-transport-https
       - helm
-
     installs:
       -
+    number_of_nodes: 3
+
+#   remote_user: control # ansible_ssh_user, ansible_user, remote_user are unspecified,
+# not only that, but when trying to define remote_user, ansible throws a hissy fit, go figure!
+    r_user: control
 
   tasks:
+    - name: Which ansible release version?
+      debug:
+        msg: "This is the linux distro release on the remote machine => {{ ansible_distribution_release }}"
+
     - name: Install files
       debug:
         msg: "dummy for install files task"
@@ -50,3 +59,23 @@
         name: "{{ packages }}"
         state: latest
         update_cache: yes
+
+    - name: Create directory for sources
+      file:
+        path: "/home/{{ r_user }}/src"
+        state: directory
+
+    - name: Get source for rancher-launcher-kvm
+      git:
+        repo: "{{ git_repo }}"
+        dest: "/home/{{ r_user }}/src/rancher-launcher-kvm"
+        clone: yes
+        update: yes
+
+    - name: Provision "{{ number_of_nodes }}" nodes
+      command: "./home/{{ r_user }}/src/rancher-launcher-kvm/provision.sh {{ number_of_nodes }}"
+      register: provision_msg
+
+    - name: Display output message from provision
+      debug:
+        msg: "Output of provisioning => {{ provision_msg }}"
