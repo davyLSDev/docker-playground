@@ -1,81 +1,23 @@
 ---
 # rancher-play.yml
-# Based on https://helm.sh/docs/intro/install/, and https://github.com/hoeghh/rancher-launcher-kvm
-# Example run: ansible-playbook -i hosts rancher-play.yml --ask-become-pass
-#   the --ask-become-pass not required if sudo is passwordless
+# Based on https://rancher.com/docs/rancher/v2.x/en/quick-start-guide/deployment/quickstart-manual-setup/
+# Example run: ansible-playbook -i hosts rancher-play.yml
 
-# weird thing about quotations or something haywire going on . . . when the single use key, and repo are
-# added directly to the command rather than coming from the variables, they work
+# just need to replicate this in ansible-speak:
+# sudo docker run -d --restart=unless-stopped -p 80:80 -p 443:443 --privileged rancher/rancher
 - hosts: all
   become: true
   vars:
-    files:
-      - not-the-right-file.sh
-    git_repo: "https://github.com/hoeghh/rancher-launcher-kvm.git"
-    keys:
-      - "https://baltocdn.com/helm/signing.asc"
-      # Fails to download key using either quotes, without quotes it fails and ansible prompts to use quotes
-    repos:
-      - deb https://baltocdn.com/helm/stable/debian/ all main
-    packages:
-      - git
-      - apt-transport-https
-      - helm
-    installs:
-      -
-    number_of_nodes: 3
-
-#   remote_user: control # ansible_ssh_user, ansible_user, remote_user are unspecified,
-# not only that, but when trying to define remote_user, ansible throws a hissy fit, go figure!
-    r_user: control
+#    rancher_http_port: "80:80"
+#    rancher_https_port: "443:433"
 
   tasks:
-    - name: Which ansible release version?
-      debug:
-        msg: "This is the linux distro release on the remote machine => {{ ansible_distribution_release }}"
-
-    - name: Install files
-      debug:
-        msg: "dummy for install files task"
-
-    - name: Install keys
-      # debug:
-      #   msg: "Install keys from {{ keys }}"
-      apt_key:
-        # url: "{{ keys }}"
-        url: https://baltocdn.com/helm/signing.asc
-        state: present
-
-    - name: Add repos
-      apt_repository:
-        repo: deb https://baltocdn.com/helm/stable/debian/ all main
-      # debug:
-      #   msg: "What is wrong with the {{ repos }} string?"
-      # apt_repository:
-      #   repo: "{{ repos }}"
-
-    - name: Install packages
-      apt:
-        name: "{{ packages }}"
-        state: latest
-        update_cache: yes
-
-    - name: Create directory for sources
-      file:
-        path: "/home/{{ r_user }}/src"
-        state: directory
-
-    - name: Get source for rancher-launcher-kvm
-      git:
-        repo: "{{ git_repo }}"
-        dest: "/home/{{ r_user }}/src/rancher-launcher-kvm"
-        clone: yes
-        update: yes
-
-    - name: Provision "{{ number_of_nodes }}" nodes
-      command: "./home/{{ r_user }}/src/rancher-launcher-kvm/provision.sh {{ number_of_nodes }}"
-      register: provision_msg
-
-    - name: Display output message from provision
-      debug:
-        msg: "Output of provisioning => {{ provision_msg }}"
+  - name: Install Rancher on remote server
+    docker_container:
+      name: rancher
+      image: rancher/rancher
+      privileged: yes
+      restart_policy: unless-stopped
+      ports:
+        - 80:80
+        - 443:443
